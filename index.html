@@ -1,0 +1,2385 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cahier des Charges Architectural — TACHTA Hotel & Resort</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    
+    <!-- PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --color-bg: #FAF9F7;
+            --color-bg-alt: #F3F1ED;
+            --color-text: #2C2825;
+            --color-text-light: #6B6560;
+            --color-accent: #8B7355;
+            --color-accent-light: #C4B5A0;
+            --color-gold: #B8996F;
+            --color-white: #FFFFFF;
+            --color-border: #E5E2DC;
+            --color-success: #4CAF50;
+            --color-warning: #FF9800;
+            --color-error: #f44336;
+            --color-info: #2196F3;
+            --font-display: 'Cormorant Garamond', Georgia, serif;
+            --font-body: 'Jost', 'Helvetica Neue', sans-serif;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-body);
+            font-weight: 300;
+            font-size: 16px;
+            line-height: 1.8;
+            color: var(--color-text);
+            background: var(--color-bg);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Print Styles */
+        @media print {
+            body { background: white; font-size: 11pt; }
+            .no-print, .sidebar, .floating-nav, .toolbar, .toast-container, .modal-overlay { display: none !important; }
+            .main-content { margin-left: 0 !important; padding: 20px !important; margin-top: 0 !important; }
+            section { page-break-inside: avoid; break-inside: avoid; }
+            h2 { page-break-after: avoid; }
+            .cover-page { height: auto; min-height: 100vh; }
+            [contenteditable] { border: none !important; outline: none !important; }
+        }
+
+        /* Toolbar */
+        .toolbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: var(--color-white);
+            border-bottom: 1px solid var(--color-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .toolbar-logo {
+            font-family: var(--font-display);
+            font-size: 20px;
+            font-weight: 500;
+            color: var(--color-accent);
+            letter-spacing: 0.05em;
+        }
+
+        .toolbar-title {
+            font-size: 13px;
+            color: var(--color-text-light);
+            display: none;
+        }
+
+        @media (min-width: 768px) {
+            .toolbar-title { display: block; }
+        }
+
+        .toolbar-center {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: var(--color-bg-alt);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--color-text-light);
+        }
+
+        .status-dot.online { background: var(--color-success); }
+        .status-dot.syncing { background: var(--color-warning); animation: pulse 1s infinite; }
+        .status-dot.offline { background: var(--color-error); }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .user-count {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--color-text-light);
+        }
+
+        .edit-mode-badge {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 6px 12px;
+            border-radius: 4px;
+            background: var(--color-accent);
+            color: var(--color-white);
+        }
+
+        .edit-mode-badge.active { display: flex; }
+
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toolbar-btn {
+            padding: 8px 16px;
+            font-family: var(--font-body);
+            font-size: 12px;
+            font-weight: 500;
+            border: 1px solid var(--color-border);
+            background: var(--color-white);
+            color: var(--color-text);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-radius: 4px;
+        }
+
+        .toolbar-btn:hover {
+            background: var(--color-bg-alt);
+            border-color: var(--color-accent-light);
+        }
+
+        .toolbar-btn.primary {
+            background: var(--color-accent);
+            border-color: var(--color-accent);
+            color: var(--color-white);
+        }
+
+        .toolbar-btn.primary:hover {
+            background: var(--color-text);
+            border-color: var(--color-text);
+        }
+
+        .toolbar-btn.danger {
+            color: var(--color-error);
+        }
+
+        .toolbar-btn.danger:hover {
+            background: var(--color-error);
+            border-color: var(--color-error);
+            color: white;
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast {
+            padding: 12px 20px;
+            background: var(--color-text);
+            color: white;
+            border-radius: 8px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            animation: slideIn 0.3s ease;
+            max-width: 350px;
+        }
+
+        .toast.success { background: var(--color-success); }
+        .toast.warning { background: var(--color-warning); color: var(--color-text); }
+        .toast.error { background: var(--color-error); }
+        .toast.info { background: var(--color-info); }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+
+        .toast.hiding {
+            animation: slideOut 0.3s ease forwards;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            padding: 20px;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: var(--color-white);
+            border-radius: 12px;
+            max-width: 450px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+
+        .modal-header {
+            padding: 24px 24px 0;
+            text-align: center;
+        }
+
+        .modal-icon {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 16px;
+            background: var(--color-bg-alt);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .modal-title {
+            font-family: var(--font-display);
+            font-size: 24px;
+            font-weight: 500;
+            color: var(--color-text);
+            margin-bottom: 8px;
+        }
+
+        .modal-subtitle {
+            font-size: 14px;
+            color: var(--color-text-light);
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .modal-input-group {
+            margin-bottom: 16px;
+        }
+
+        .modal-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--color-text-light);
+            margin-bottom: 8px;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 12px 16px;
+            font-family: var(--font-body);
+            font-size: 14px;
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            background: var(--color-bg);
+            transition: all 0.2s ease;
+        }
+
+        .modal-input:focus {
+            outline: none;
+            border-color: var(--color-accent);
+            background: var(--color-white);
+        }
+
+        .modal-input.error {
+            border-color: var(--color-error);
+        }
+
+        .modal-error {
+            font-size: 12px;
+            color: var(--color-error);
+            margin-top: 6px;
+            display: none;
+        }
+
+        .modal-error.visible { display: block; }
+
+        .modal-footer {
+            padding: 0 24px 24px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 14px 20px;
+            font-family: var(--font-body);
+            font-size: 14px;
+            font-weight: 500;
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .modal-btn.primary {
+            background: var(--color-accent);
+            border-color: var(--color-accent);
+            color: var(--color-white);
+        }
+
+        .modal-btn.primary:hover {
+            background: var(--color-text);
+            border-color: var(--color-text);
+        }
+
+        .modal-btn.secondary {
+            background: var(--color-white);
+            color: var(--color-text);
+        }
+
+        .modal-btn.secondary:hover {
+            background: var(--color-bg-alt);
+        }
+
+        /* Editable Content Styles */
+        [data-field] {
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        body.edit-mode [data-field] {
+            cursor: text;
+        }
+
+        body.edit-mode [data-field]:hover {
+            background: rgba(139, 115, 85, 0.05);
+        }
+
+        body.edit-mode [data-field]:focus {
+            outline: none;
+            background: rgba(139, 115, 85, 0.08);
+            box-shadow: inset 0 0 0 2px var(--color-accent-light);
+        }
+
+        [data-field].remote-editing {
+            box-shadow: inset 0 0 0 2px var(--color-info) !important;
+            background: rgba(33, 150, 243, 0.05) !important;
+        }
+
+        [data-field].remote-editing::after {
+            content: '✏️ En cours d\'édition...';
+            position: absolute;
+            top: -24px;
+            left: 0;
+            font-size: 10px;
+            background: var(--color-info);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* Last Sync Info */
+        .sync-info {
+            position: fixed;
+            bottom: 24px;
+            left: 24px;
+            font-size: 11px;
+            color: var(--color-text-light);
+            background: var(--color-white);
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--color-border);
+            z-index: 100;
+        }
+
+        /* Cover Page */
+        .cover-page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: linear-gradient(180deg, var(--color-bg) 0%, var(--color-bg-alt) 100%);
+            position: relative;
+            padding: 100px 40px 60px;
+            margin-top: 60px;
+        }
+
+        .cover-page::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(139, 115, 85, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(184, 153, 111, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .cover-logo {
+            width: 80px;
+            height: 80px;
+            border: 2px solid var(--color-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 60px;
+            position: relative;
+        }
+
+        .cover-logo span {
+            font-family: var(--font-display);
+            font-size: 32px;
+            font-weight: 300;
+            color: var(--color-accent);
+            letter-spacing: 0.1em;
+        }
+
+        .cover-subtitle {
+            font-family: var(--font-body);
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            color: var(--color-accent);
+            margin-bottom: 24px;
+        }
+
+        .cover-title {
+            font-family: var(--font-display);
+            font-size: clamp(36px, 6vw, 64px);
+            font-weight: 300;
+            line-height: 1.1;
+            color: var(--color-text);
+            margin-bottom: 16px;
+            letter-spacing: -0.02em;
+        }
+
+        .cover-title em {
+            font-style: italic;
+            color: var(--color-accent);
+        }
+
+        .cover-project {
+            font-family: var(--font-display);
+            font-size: clamp(24px, 4vw, 40px);
+            font-weight: 400;
+            color: var(--color-gold);
+            margin-bottom: 60px;
+            letter-spacing: 0.05em;
+        }
+
+        .cover-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 40px;
+            justify-content: center;
+            font-size: 13px;
+            color: var(--color-text-light);
+            letter-spacing: 0.05em;
+        }
+
+        .cover-meta-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .cover-meta-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--color-accent-light);
+        }
+
+        .cover-stars {
+            font-size: 18px;
+            letter-spacing: 0.2em;
+            color: var(--color-gold);
+            margin-top: 40px;
+        }
+
+        .scroll-indicator {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            color: var(--color-accent-light);
+            font-size: 10px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            animation: float 2s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(8px); }
+        }
+
+        .scroll-indicator svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--color-accent-light);
+        }
+
+        /* Main Content */
+        .main-content {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 80px 40px 120px;
+        }
+
+        /* Section Styles */
+        section {
+            margin-bottom: 100px;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeInUp 0.8s ease forwards;
+        }
+
+        section:nth-child(1) { animation-delay: 0.1s; }
+        section:nth-child(2) { animation-delay: 0.15s; }
+        section:nth-child(3) { animation-delay: 0.2s; }
+        section:nth-child(4) { animation-delay: 0.25s; }
+        section:nth-child(5) { animation-delay: 0.3s; }
+        section:nth-child(6) { animation-delay: 0.35s; }
+        section:nth-child(7) { animation-delay: 0.4s; }
+        section:nth-child(8) { animation-delay: 0.45s; }
+        section:nth-child(9) { animation-delay: 0.5s; }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section-number {
+            font-family: var(--font-display);
+            font-size: 14px;
+            font-weight: 400;
+            color: var(--color-accent-light);
+            letter-spacing: 0.2em;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        h2 {
+            font-family: var(--font-display);
+            font-size: clamp(28px, 4vw, 38px);
+            font-weight: 400;
+            color: var(--color-text);
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--color-border);
+            letter-spacing: -0.01em;
+        }
+
+        h3 {
+            font-family: var(--font-display);
+            font-size: 22px;
+            font-weight: 500;
+            color: var(--color-text);
+            margin: 40px 0 20px;
+            letter-spacing: 0.01em;
+        }
+
+        h4 {
+            font-family: var(--font-body);
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--color-accent);
+            margin: 30px 0 16px;
+        }
+
+        p {
+            margin-bottom: 20px;
+            color: var(--color-text);
+        }
+
+        .lead {
+            font-size: 18px;
+            line-height: 1.9;
+            color: var(--color-text-light);
+            font-weight: 300;
+        }
+
+        /* Quote Block */
+        .quote-block {
+            background: linear-gradient(135deg, var(--color-bg-alt) 0%, var(--color-white) 100%);
+            border-left: 3px solid var(--color-gold);
+            padding: 30px 35px;
+            margin: 40px 0;
+            position: relative;
+        }
+
+        .quote-block::before {
+            content: '"';
+            position: absolute;
+            top: 10px;
+            left: 15px;
+            font-family: var(--font-display);
+            font-size: 60px;
+            color: var(--color-accent-light);
+            opacity: 0.3;
+            line-height: 1;
+        }
+
+        .quote-block p {
+            font-family: var(--font-display);
+            font-size: 20px;
+            font-style: italic;
+            line-height: 1.7;
+            color: var(--color-text);
+            margin: 0;
+        }
+
+        /* Data Grid */
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 24px;
+            margin: 30px 0;
+        }
+
+        .data-card {
+            background: var(--color-white);
+            border: 1px solid var(--color-border);
+            padding: 28px;
+            transition: all 0.3s ease;
+        }
+
+        .data-card:hover {
+            border-color: var(--color-accent-light);
+            box-shadow: 0 8px 30px rgba(139, 115, 85, 0.08);
+        }
+
+        .data-card-value {
+            font-family: var(--font-display);
+            font-size: 32px;
+            font-weight: 400;
+            color: var(--color-accent);
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+
+        .data-card-label {
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--color-text-light);
+        }
+
+        /* Tables */
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 30px 0;
+            border: 1px solid var(--color-border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        thead {
+            background: var(--color-bg-alt);
+        }
+
+        th {
+            font-weight: 500;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            color: var(--color-text-light);
+            text-align: left;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        td {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--color-border);
+            vertical-align: top;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: rgba(139, 115, 85, 0.02);
+        }
+
+        /* Values Grid */
+        .values-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0;
+            margin: 40px 0;
+            border: 1px solid var(--color-border);
+        }
+
+        @media (max-width: 768px) {
+            .values-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .value-item:nth-child(5) {
+                grid-column: span 2;
+            }
+        }
+
+        .value-item {
+            text-align: center;
+            padding: 40px 20px;
+            border-right: 1px solid var(--color-border);
+            background: var(--color-white);
+            transition: all 0.3s ease;
+        }
+
+        .value-item:last-child {
+            border-right: none;
+        }
+
+        .value-item:hover {
+            background: var(--color-bg-alt);
+        }
+
+        .value-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--color-accent-light);
+            border-radius: 50%;
+        }
+
+        .value-icon svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--color-accent);
+        }
+
+        .value-item h5 {
+            font-family: var(--font-display);
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--color-text);
+            margin: 0;
+        }
+
+        /* Spec List */
+        .spec-list {
+            list-style: none;
+            margin: 20px 0;
+        }
+
+        .spec-list li {
+            display: flex;
+            justify-content: space-between;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--color-border);
+            font-size: 14px;
+        }
+
+        .spec-list li:last-child {
+            border-bottom: none;
+        }
+
+        .spec-label {
+            color: var(--color-text-light);
+        }
+
+        .spec-value {
+            font-weight: 500;
+            color: var(--color-text);
+            text-align: right;
+        }
+
+        /* Info Box */
+        .info-box {
+            background: var(--color-bg-alt);
+            border: 1px solid var(--color-border);
+            padding: 30px;
+            margin: 30px 0;
+        }
+
+        .info-box h5 {
+            font-family: var(--font-body);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--color-accent);
+            margin-bottom: 16px;
+        }
+
+        .info-box p {
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .info-box p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            margin: 40px 0;
+            padding-left: 30px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 8px;
+            bottom: 8px;
+            width: 1px;
+            background: var(--color-border);
+        }
+
+        .timeline-item {
+            position: relative;
+            padding: 0 0 40px 30px;
+        }
+
+        .timeline-item:last-child {
+            padding-bottom: 0;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -30px;
+            top: 8px;
+            width: 9px;
+            height: 9px;
+            background: var(--color-white);
+            border: 2px solid var(--color-accent);
+            border-radius: 50%;
+        }
+
+        .timeline-phase {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--color-accent);
+            margin-bottom: 8px;
+        }
+
+        .timeline-title {
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--color-text);
+            margin-bottom: 8px;
+        }
+
+        .timeline-desc {
+            font-size: 14px;
+            color: var(--color-text-light);
+            line-height: 1.7;
+        }
+
+        /* Footer */
+        .document-footer {
+            text-align: center;
+            padding: 60px 40px;
+            border-top: 1px solid var(--color-border);
+            margin-top: 80px;
+        }
+
+        .footer-logo {
+            font-family: var(--font-display);
+            font-size: 24px;
+            font-weight: 400;
+            color: var(--color-accent);
+            letter-spacing: 0.1em;
+            margin-bottom: 20px;
+        }
+
+        .footer-text {
+            font-size: 12px;
+            color: var(--color-text-light);
+            letter-spacing: 0.05em;
+        }
+
+        .footer-text a {
+            color: var(--color-accent);
+            text-decoration: none;
+        }
+
+        .confidential-badge {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 8px 20px;
+            border: 1px solid var(--color-border);
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: var(--color-text-light);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 60px 24px 80px;
+            }
+
+            .cover-page {
+                padding: 100px 24px 60px;
+            }
+
+            .toolbar {
+                padding: 0 12px;
+            }
+
+            .toolbar-btn span {
+                display: none;
+            }
+
+            .connection-status span {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Toolbar -->
+    <div class="toolbar no-print">
+        <div class="toolbar-left">
+            <div class="toolbar-logo">TACHTA</div>
+            <div class="toolbar-title">Cahier des Charges Architectural</div>
+        </div>
+        
+        <div class="toolbar-center">
+            <div class="connection-status" id="connectionStatus">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Connexion...</span>
+            </div>
+            <div class="user-count" id="userCount">
+                <span>👥</span>
+                <span id="userCountText">-</span>
+            </div>
+            <div class="edit-mode-badge" id="editModeBadge">
+                <span>✏️</span>
+                <span>Mode Édition</span>
+            </div>
+        </div>
+        
+        <div class="toolbar-right">
+            <button class="toolbar-btn" onclick="downloadPDF()" title="Télécharger PDF">
+                <span>📥</span>
+                <span>PDF</span>
+            </button>
+            <button class="toolbar-btn" onclick="downloadHTML()" title="Télécharger HTML">
+                <span>📄</span>
+                <span>HTML</span>
+            </button>
+            <button class="toolbar-btn danger" onclick="confirmRestore()" id="restoreBtn" style="display:none;" title="Restaurer version originale">
+                <span>🔄</span>
+                <span>Restaurer</span>
+            </button>
+            <button class="toolbar-btn primary" onclick="showPasswordModal()" id="editBtn" title="Mode édition">
+                <span>🔐</span>
+                <span>Éditer</span>
+            </button>
+            <button class="toolbar-btn" onclick="exitEditMode()" id="exitEditBtn" style="display:none;" title="Quitter le mode édition">
+                <span>✕</span>
+                <span>Quitter</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Password Modal -->
+    <div class="modal-overlay" id="passwordModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-icon">🔐</div>
+                <h3 class="modal-title">Mode Édition</h3>
+                <p class="modal-subtitle">Entrez le mot de passe pour modifier le document</p>
+            </div>
+            <div class="modal-body">
+                <div class="modal-input-group">
+                    <label class="modal-label">Mot de passe</label>
+                    <input type="password" class="modal-input" id="passwordInput" placeholder="••••••••" onkeypress="handlePasswordKeypress(event)">
+                    <p class="modal-error" id="passwordError">Mot de passe incorrect</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn secondary" onclick="hidePasswordModal()">Annuler</button>
+                <button class="modal-btn primary" onclick="checkPassword()">Accéder</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Restore Confirmation Modal -->
+    <div class="modal-overlay" id="restoreModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-icon">⚠️</div>
+                <h3 class="modal-title">Restaurer Version Originale</h3>
+                <p class="modal-subtitle">Cette action remplacera toutes les modifications par le contenu original. Tous les utilisateurs connectés verront ce changement.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn secondary" onclick="hideRestoreModal()">Annuler</button>
+                <button class="modal-btn primary" onclick="restoreOriginalVersion()">Confirmer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Sync Info -->
+    <div class="sync-info no-print" id="syncInfo">
+        Dernière synchro : <span id="lastSyncTime">-</span>
+    </div>
+
+    <!-- Cover Page -->
+    <header class="cover-page" id="documentContent">
+        <div class="cover-logo">
+            <span>T</span>
+        </div>
+        <p class="cover-subtitle">Cahier des Charges Architectural</p>
+        <h1 class="cover-title">TACHTA <em>Hotel & Resort</em></h1>
+        <p class="cover-project" data-field="cover_location">Ouazzane, Maroc</p>
+        
+        <div class="cover-meta">
+            <div class="cover-meta-item">
+                <span class="cover-meta-label">Classification</span>
+                <span data-field="cover_classification">Boutique Hôtel 5★ Luxe</span>
+            </div>
+            <div class="cover-meta-item">
+                <span class="cover-meta-label">Cadre légal</span>
+                <span data-field="cover_cadre">RIA — Résidences Immobilières Adossées</span>
+            </div>
+            <div class="cover-meta-item">
+                <span class="cover-meta-label">Maître d'Ouvrage</span>
+                <span data-field="cover_maitre_ouvrage">Ouazzane Hospitality SARL</span>
+            </div>
+            <div class="cover-meta-item">
+                <span class="cover-meta-label">Version</span>
+                <span data-field="cover_version">1.0 — Janvier 2026</span>
+            </div>
+        </div>
+
+        <div class="cover-stars">★★★★★</div>
+
+        <div class="scroll-indicator no-print">
+            <span>Découvrir</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5">
+                <path d="M12 5v14M5 12l7 7 7-7"/>
+            </svg>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+        <!-- Section 1: Préambule -->
+        <section id="preambule">
+            <span class="section-number">Section 01</span>
+            <h2 data-field="section1_title">Préambule — Vision du Maître d'Ouvrage</h2>
+            
+            <p class="lead" data-field="section1_lead">Le projet TACHTA Hotel & Resort incarne une vision ambitieuse : créer un havre de paix où le luxe épuré rencontre l'authenticité marocaine, dans un écrin naturel surplombant la ville historique de Ouazzane.</p>
+
+            <div class="quote-block">
+                <p data-field="section1_quote">Un investissement-plaisir alliant rentabilité, liberté d'usage et prestations haut de gamme, ancré dans les valeurs de pureté, d'authenticité et de chaleur humaine.</p>
+            </div>
+
+            <h3 data-field="section1_h3_1">Philosophie du Projet</h3>
+            
+            <p data-field="section1_para1">TACHTA — qui signifie "pluie" en dialecte local — symbolise la renaissance et la fertilité. Ce projet se veut catalyseur du développement touristique de Ouazzane, destination spirituelle, culturelle et sportive à fort potentiel.</p>
+
+            <p data-field="section1_para2">Notre vision architecturale s'inspire du luxe nordique et suédois : des lignes pures, des matériaux nobles, une intégration harmonieuse dans le paysage, tout en célébrant l'artisanat et le patrimoine marocain. Le résultat : un lieu chaleureux et raffiné où chaque détail raconte une histoire.</p>
+
+            <h4>Objectifs Stratégiques</h4>
+
+            <div class="data-grid">
+                <div class="data-card">
+                    <div class="data-card-value" data-field="kpi_investissement">160M</div>
+                    <div class="data-card-label">DHS d'investissement total</div>
+                </div>
+                <div class="data-card">
+                    <div class="data-card-value" data-field="kpi_cles">35</div>
+                    <div class="data-card-label">Clés hôtelières</div>
+                </div>
+                <div class="data-card">
+                    <div class="data-card-value" data-field="kpi_unites">116</div>
+                    <div class="data-card-label">Unités résidentielles RIA</div>
+                </div>
+                <div class="data-card">
+                    <div class="data-card-value" data-field="kpi_rendement">6%</div>
+                    <div class="data-card-label">Rendement annuel net garanti</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Contexte & Enjeux -->
+        <section id="contexte">
+            <span class="section-number">Section 02</span>
+            <h2 data-field="section2_title">Contexte & Enjeux</h2>
+
+            <h3 data-field="section2_h3_1">Le Site — Ouazzane</h3>
+            
+            <p data-field="section2_para1">Nichée au cœur du Rif occidental, Ouazzane occupe une position stratégique sur le circuit touristique reliant Tanger, Chefchaouen et Fès. La ville, surnommée "la ville sainte" ou "Dar Dmana" (maison de la garantie), possède un riche patrimoine spirituel et artisanal encore largement préservé du tourisme de masse.</p>
+
+            <div class="info-box">
+                <h5>Positionnement géographique</h5>
+                <p data-field="section2_geo1">À 1h30 de Tanger, 1h de Chefchaouen, 2h de Fès — carrefour idéal sur le circuit nord du Maroc.</p>
+                <p data-field="section2_geo2">Altitude : 300-400m — climat tempéré, idéal pour un tourisme toute saison.</p>
+                <p data-field="section2_geo3">Terrain du projet : 7 639 m² sur Titre Foncier 30810/30, surplombant la ville et la forêt.</p>
+            </div>
+
+            <h3 data-field="section2_h3_2">Opportunités</h3>
+            
+            <p data-field="section2_para2">L'absence d'offre hôtelière haut de gamme sur le territoire représente une opportunité unique de positionnement. Le projet bénéficie du soutien des autorités locales dans le cadre d'un contrat-programme de développement touristique 2026-2030.</p>
+
+            <h4>Marchés cibles</h4>
+            
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Segment</th>
+                            <th>Profil</th>
+                            <th>Besoins clés</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong data-field="marche1_segment">Marocains du Monde</strong></td>
+                            <td data-field="marche1_profil">Diaspora originaire de Ouazzane (Europe, Israël)</td>
+                            <td data-field="marche1_besoins">Pied-à-terre familial, retour aux sources, investissement patrimonial</td>
+                        </tr>
+                        <tr>
+                            <td><strong data-field="marche2_segment">Urbains CSP+</strong></td>
+                            <td data-field="marche2_profil">Couples/retraités de Casablanca et Rabat</td>
+                            <td data-field="marche2_besoins">Escapade nature, authenticité, cadre familial</td>
+                        </tr>
+                        <tr>
+                            <td><strong data-field="marche3_segment">Tourisme international</strong></td>
+                            <td data-field="marche3_profil">Circuit Tanger-Chefchaouen-Fès</td>
+                            <td data-field="marche3_besoins">Expérience culturelle, spiritualité, nature</td>
+                        </tr>
+                        <tr>
+                            <td><strong data-field="marche4_segment">MICE & Corporate</strong></td>
+                            <td data-field="marche4_profil">Entreprises, séminaires, team-building</td>
+                            <td data-field="marche4_besoins">Cadre inspirant, équipements, accessibilité</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 data-field="section2_h3_3">Contraintes du Site</h3>
+            
+            <p data-field="section2_para3">La topographie en pente du terrain, si elle offre des vues panoramiques exceptionnelles, impose une réflexion approfondie sur l'implantation des bâtiments, la gestion des accès et l'intégration paysagère. Le respect des normes de classement 5 étoiles et du cadre réglementaire RIA (Arrêté n° 836-24) constitue un impératif absolu.</p>
+        </section>
+
+        <!-- Section 3: Programme Fonctionnel -->
+        <section id="programme">
+            <span class="section-number">Section 03</span>
+            <h2 data-field="section3_title">Programme Fonctionnel Détaillé</h2>
+
+            <h3 data-field="section3_h3_1">A. Boutique Hôtel 5★ Luxe</h3>
+            
+            <div class="data-grid">
+                <div class="data-card">
+                    <div class="data-card-value" data-field="hotel_shob">3 874</div>
+                    <div class="data-card-label">m² SHOB/SHON</div>
+                </div>
+                <div class="data-card">
+                    <div class="data-card-value" data-field="hotel_ratio">1.72:1</div>
+                    <div class="data-card-label">Ratio équipements/hébergement</div>
+                </div>
+                <div class="data-card">
+                    <div class="data-card-value" data-field="hotel_parties_communes">45%</div>
+                    <div class="data-card-label">Parties communes</div>
+                </div>
+            </div>
+
+            <h4>Hébergement — 950 m²</h4>
+            
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Typologie</th>
+                            <th>Quantité</th>
+                            <th>Surface unitaire</th>
+                            <th>Surface totale</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td data-field="chambre_type1">Chambres Deluxe</td>
+                            <td data-field="chambre_qty1">30</td>
+                            <td data-field="chambre_surf1">25 m²</td>
+                            <td data-field="chambre_total1">750 m²</td>
+                        </tr>
+                        <tr>
+                            <td data-field="chambre_type2">Suites</td>
+                            <td data-field="chambre_qty2">5</td>
+                            <td data-field="chambre_surf2">40 m²</td>
+                            <td data-field="chambre_total2">200 m²</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h4>Équipements & Services — 1 721 m²</h4>
+
+            <ul class="spec-list">
+                <li>
+                    <span class="spec-label" data-field="equip_label1">Piscine à débordement</span>
+                    <span class="spec-value" data-field="equip_value1">250 m²</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="equip_label2">Terrasse solarium</span>
+                    <span class="spec-value" data-field="equip_value2">500 m²</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="equip_label3">SPA & Salon de coiffure</span>
+                    <span class="spec-value" data-field="equip_value3">450 m²</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="equip_label4">Restaurant & Lounge Bar</span>
+                    <span class="spec-value" data-field="equip_value4">221 m²</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="equip_label5">Salle événementielle / Ballroom</span>
+                    <span class="spec-value" data-field="equip_value5">300 m²</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="equip_label6">Salle de fitness</span>
+                    <span class="spec-value" data-field="equip_value6">Selon programme</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="equip_label7">Boutiques</span>
+                    <span class="spec-value" data-field="equip_value7">Selon programme</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="equip_label8">Ascenseur panoramique</span>
+                    <span class="spec-value" data-field="equip_value8">Traversant, vue ville & forêt</span>
+                </li>
+            </ul>
+
+            <h4>Parties Communes — 1 202 m² (45%)</h4>
+            
+            <p data-field="section3_para1">Les parties communes incluent : réception et lobby, circulations, locaux techniques, back-office, vestiaires personnel, stockage et espaces de service.</p>
+
+            <h3 data-field="section3_h3_2">B. Résidences Hôtelières RIA 5★</h3>
+            
+            <div class="data-grid">
+                <div class="data-card">
+                    <div class="data-card-value" data-field="ria_shob">9 120</div>
+                    <div class="data-card-label">m² SHOB</div>
+                </div>
+                <div class="data-card">
+                    <div class="data-card-value" data-field="ria_shon">7 600</div>
+                    <div class="data-card-label">m² SHON</div>
+                </div>
+                <div class="data-card">
+                    <div class="data-card-value" data-field="ria_unites">116</div>
+                    <div class="data-card-label">Unités totales</div>
+                </div>
+            </div>
+
+            <h4>Répartition des Typologies</h4>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Typologie</th>
+                            <th>Quantité</th>
+                            <th>Surface</th>
+                            <th>Caractéristiques</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong data-field="typo1_nom">F1 Pied-à-terre</strong></td>
+                            <td data-field="typo1_qty">40</td>
+                            <td data-field="typo1_surf">40 m²</td>
+                            <td data-field="typo1_carac">Studio optimisé, idéal investissement</td>
+                        </tr>
+                        <tr>
+                            <td><strong data-field="typo2_nom">F2 Traversant</strong></td>
+                            <td data-field="typo2_qty">40</td>
+                            <td data-field="typo2_surf">60 m²</td>
+                            <td data-field="typo2_carac">Double orientation, luminosité maximale</td>
+                        </tr>
+                        <tr>
+                            <td><strong data-field="typo3_nom">F3 Spacieux</strong></td>
+                            <td data-field="typo3_qty">30</td>
+                            <td data-field="typo3_surf">90 m²</td>
+                            <td data-field="typo3_carac">Famille, terrasse généreuse</td>
+                        </tr>
+                        <tr>
+                            <td><strong data-field="typo4_nom">Penthouse Duplex</strong></td>
+                            <td data-field="typo4_qty">6</td>
+                            <td data-field="typo4_surf">150 m²</td>
+                            <td data-field="typo4_carac">Prestige, rooftop privatif</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="info-box">
+                <h5>Programme de Gestion Hôtelière</h5>
+                <p data-field="section3_gestion">Vendus meublés, les appartements sont gérés intégralement par le Boutique Hotel avec un rendement annuel garanti de 6% net (gestion locative, entretien, nettoyage, sécurité, syndic inclus) et jusqu'à 50 jours d'occupation personnelle par an.</p>
+            </div>
+        </section>
+
+        <!-- Section 4: Parti Architectural -->
+        <section id="parti-architectural">
+            <span class="section-number">Section 04</span>
+            <h2 data-field="section4_title">Parti Architectural</h2>
+
+            <h3 data-field="section4_h3_1">Les Valeurs Fondamentales</h3>
+            
+            <p data-field="section4_para1">L'architecture du projet doit incarner cinq valeurs essentielles qui guideront chaque décision conceptuelle :</p>
+
+            <div class="values-grid">
+                <div class="value-item">
+                    <div class="value-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5">
+                            <circle cx="12" cy="12" r="10"/>
+                        </svg>
+                    </div>
+                    <h5 data-field="valeur1">Pureté</h5>
+                </div>
+                <div class="value-item">
+                    <div class="value-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5">
+                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                        </svg>
+                    </div>
+                    <h5 data-field="valeur2">Praticité</h5>
+                </div>
+                <div class="value-item">
+                    <div class="value-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5">
+                            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                        </svg>
+                    </div>
+                    <h5 data-field="valeur3">Sport</h5>
+                </div>
+                <div class="value-item">
+                    <div class="value-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                        </svg>
+                    </div>
+                    <h5 data-field="valeur4">Authenticité</h5>
+                </div>
+                <div class="value-item">
+                    <div class="value-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5">
+                            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+                        </svg>
+                    </div>
+                    <h5 data-field="valeur5">Famille</h5>
+                </div>
+            </div>
+
+            <h3 data-field="section4_h3_2">Ligne Directrice : Luxe Nordique Chaleureux</h3>
+            
+            <p data-field="section4_para2">L'inspiration architecturale puise dans le minimalisme scandinave tout en l'enrichissant de la chaleur méditerranéenne. Le résultat recherché est un luxe discret, où la sophistication se révèle dans la qualité des matériaux et la maîtrise des proportions plutôt que dans l'ostentation.</p>
+
+            <h4>Principes de conception</h4>
+            
+            <p data-field="section4_para3"><strong>Volumétrie :</strong> Des volumes épurés aux lignes horizontales affirmées, s'étageant harmonieusement dans la pente pour épouser la topographie naturelle. Chaque bâtiment doit maximiser les vues panoramiques sur la ville et la forêt environnante.</p>
+
+            <p data-field="section4_para4"><strong>Intégration paysagère :</strong> L'architecture doit émerger du site comme une évidence. Les toitures végétalisées, les murs de soutènement en pierre locale, et la préservation maximale de la végétation existante sont attendus.</p>
+
+            <p data-field="section4_para5"><strong>Lumière naturelle :</strong> Priorité aux grandes ouvertures vitrées orientées pour capter la lumière tout en préservant l'intimité. Les appartements traversants (F2) doivent offrir une double orientation.</p>
+
+            <h4>Palette de matériaux</h4>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Catégorie</th>
+                            <th>Matériaux préconisés</th>
+                            <th>Application</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong data-field="mat1_cat">Pierre</strong></td>
+                            <td data-field="mat1_mat">Pierre locale de Ouazzane, travertin</td>
+                            <td data-field="mat1_app">Soubassements, murs d'accentuation, terrasses</td>
+                        </tr>
+                        <tr>
+                            <td><strong data-field="mat2_cat">Bois</strong></td>
+                            <td data-field="mat2_mat">Cèdre du Maroc, chêne européen</td>
+                            <td data-field="mat2_app">Menuiseries, bardages, mobilier intégré</td>
+                        </tr>
+                        <tr>
+                            <td><strong data-field="mat3_cat">Métal</strong></td>
+                            <td data-field="mat3_mat">Acier corten, laiton brossé</td>
+                            <td data-field="mat3_app">Garde-corps, détails architecturaux</td>
+                        </tr>
+                        <tr>
+                            <td><strong data-field="mat4_cat">Verre</strong></td>
+                            <td data-field="mat4_mat">Double vitrage faible émissivité</td>
+                            <td data-field="mat4_app">Baies vitrées, ascenseur panoramique</td>
+                        </tr>
+                        <tr>
+                            <td><strong data-field="mat5_cat">Enduits</strong></td>
+                            <td data-field="mat5_mat">Tadelakt, chaux naturelle</td>
+                            <td data-field="mat5_app">Façades, espaces wellness</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h4>Référence Inspirationnelle</h4>
+            
+            <div class="info-box">
+                <h5 data-field="ref_title">Hôtel Xaluca Aguelmame Sidi Ali</h5>
+                <p data-field="ref_desc">Ce lodge de montagne au Moyen Atlas illustre l'intégration réussie d'une architecture contemporaine dans un environnement naturel marocain. Son approche du luxe discret, son utilisation de matériaux locaux et son respect du paysage constituent des références clés pour TACHTA.</p>
+                <p><em>Voir : https://maps.app.goo.gl/sBAmGGjTMyzMb5mx7</em></p>
+            </div>
+
+            <h4>Durabilité & Performance Environnementale</h4>
+            
+            <p data-field="section4_para6">Le projet doit intégrer dès sa conception les principes de construction durable : orientation bioclimatique, isolation thermique renforcée, récupération des eaux pluviales, panneaux solaires thermiques pour l'eau chaude, et ventilation naturelle optimisée. Une certification environnementale (type HQE ou équivalent local) est visée.</p>
+        </section>
+
+        <!-- Section 5: Interior Design -->
+        <section id="interior-design">
+            <span class="section-number">Section 05</span>
+            <h2 data-field="section5_title">Concept Interior Design</h2>
+
+            <h3 data-field="section5_h3_1">Direction Artistique Globale</h3>
+            
+            <p data-field="section5_para1">L'interior design prolonge la philosophie architecturale : un luxe nordique chaleureux où chaque espace raconte l'histoire de Ouazzane. L'objectif est de créer des intérieurs qui respirent la sérénité tout en offrant un confort absolu.</p>
+
+            <h4>Palette Chromatique</h4>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tonalité</th>
+                            <th>Couleurs</th>
+                            <th>Usage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong data-field="color1_ton">Neutres chauds</strong></td>
+                            <td data-field="color1_col">Blanc cassé, beige, grège, sable</td>
+                            <td data-field="color1_use">Murs, plafonds, base mobilier</td>
+                        </tr>
+                        <tr>
+                            <td><strong data-field="color2_ton">Terres</strong></td>
+                            <td data-field="color2_col">Terracotta douce, ocre, caramel</td>
+                            <td data-field="color2_use">Accentuation, textiles, céramiques</td>
+                        </tr>
+                        <tr>
+                            <td><strong data-field="color3_ton">Naturels</strong></td>
+                            <td data-field="color3_col">Vert sauge, bleu de Fès (subtil)</td>
+                            <td data-field="color3_use">Touches végétales, détails artisanaux</td>
+                        </tr>
+                        <tr>
+                            <td><strong data-field="color4_ton">Métalliques</strong></td>
+                            <td data-field="color4_col">Laiton doré, bronze patiné</td>
+                            <td data-field="color4_use">Luminaires, accessoires, robinetterie</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 data-field="section5_h3_2">Ambiances par Espace</h3>
+
+            <h4 data-field="espace1_title">Lobby & Réception</h4>
+            <p data-field="espace1_desc">Premier contact avec l'univers TACHTA. L'espace doit incarner l'accueil marocain dans une interprétation contemporaine : double hauteur généreuse, cheminée centrale sculpturale, mur végétal ou installation artistique faisant référence au paysage environnant. Mobilier bas et accueillant, éclairage travaillé créant des îlots d'intimité.</p>
+
+            <h4 data-field="espace2_title">Restaurant & Lounge Bar</h4>
+            <p data-field="espace2_desc">Ambiance de table d'hôtes raffinée. Cuisine ouverte sur la salle (show cooking), terrasse prolongeant l'espace intérieur avec vue panoramique. Bar comme sculpture centrale. Acoustique soignée permettant des conversations intimes. Éclairage modulable selon les moments de la journée.</p>
+
+            <h4 data-field="espace3_title">SPA & Wellness</h4>
+            <p data-field="espace3_desc">Sanctuaire de sérénité. Inspiration hammam réinterprétée avec lignes épurées. Tadelakt authentique, zelliges contemporains, jeux de lumière tamisée. Parcours sensoriel : hammam, bain froid, salles de soins, espace détente avec vue sur la nature. Parfum signature TACHTA diffusé.</p>
+
+            <h4 data-field="espace4_title">Chambres & Suites</h4>
+            <p data-field="espace4_desc">Cocons de confort où chaque détail compte. Tête de lit monumentale en matériau noble, literie d'exception, dressing fonctionnel, salle de bain ouverte (option) avec baignoire îlot face à la vue. Minibar dissimulé, éclairage de lecture intégré, rideaux motorisés. Terrasse ou balcon privatif systématique.</p>
+
+            <h4 data-field="espace5_title">Appartements RIA</h4>
+            <p data-field="espace5_desc">Déclinaison résidentielle de l'esprit hôtelier. Livrés entièrement meublés et équipés selon un cahier des charges uniforme garantissant la cohérence de l'ensemble et la qualité locative. Cuisine équipée haut de gamme, rangements optimisés, finitions identiques à l'hôtel.</p>
+
+            <h4 data-field="espace6_title">Salle Événementielle / Ballroom</h4>
+            <p data-field="espace6_desc">Espace polyvalent de 300 m² divisible. Plafond technique permettant suspensions et éclairages scéniques. Acoustique optimisée, système audiovisuel intégré. Accès direct extérieur et liaison cuisine. Vestiaires et sanitaires dédiés.</p>
+
+            <h3 data-field="section5_h3_3">Artisanat & Savoir-faire Local</h3>
+            
+            <p data-field="section5_para2">Le projet doit intégrer de manière significative l'artisanat de Ouazzane et de la région : tapis et tissages du Rif, poteries, fer forgé, broderies. Ces éléments ne doivent pas apparaître comme décoratifs mais comme constitutifs de l'identité des espaces, dans un dialogue permanent entre tradition et modernité.</p>
+
+            <h4>Éclairage</h4>
+            <p data-field="section5_para3">L'éclairage est traité comme un matériau à part entière. Luminaires sur mesure inspirés des lanternes traditionnelles, éclairage indirect architectural, mise en valeur des textures et matériaux. Scénarios programmables adaptés aux usages (accueil, travail, détente, dîner, nuit).</p>
+
+            <h4>Mobilier</h4>
+            <p data-field="section5_para4">Pièces iconiques de designers contemporains (scandinaves notamment) associées à des créations sur mesure d'artisans locaux. Équilibre entre confort absolu, fonctionnalité et esthétique. Privilégier les matériaux durables et les fabrications éthiques.</p>
+        </section>
+
+        <!-- Section 6: Exigences Techniques -->
+        <section id="exigences-techniques">
+            <span class="section-number">Section 06</span>
+            <h2 data-field="section6_title">Exigences Techniques</h2>
+
+            <h3 data-field="section6_h3_1">Conformité Réglementaire</h3>
+            
+            <p data-field="section6_para1">Le projet doit répondre intégralement aux normes de classement hôtelier 5 étoiles luxe et aux exigences du cadre RIA (Résidences Immobilières Adossées) tel que défini par l'Arrêté n° 836-24.</p>
+
+            <div class="info-box">
+                <h5>11 Thématiques Normatives RIA</h5>
+                <p data-field="section6_normes">La conformité aux normes de classement RIA couvre 11 thématiques obligatoires que l'architecte devra intégrer dès la phase conception : extérieurs et signalétique, hall et réception, chambres et suites, restauration, équipements de loisirs, services, développement durable, accessibilité, sécurité, gestion qualité, et personnel.</p>
+            </div>
+
+            <h4>Accessibilité PMR</h4>
+            
+            <p data-field="section6_para2">Conformité totale aux normes d'accessibilité pour les personnes à mobilité réduite : 5% minimum des chambres adaptées PMR, accessibilité de l'ensemble des espaces communs, signalétique adaptée, équipements de piscine et spa accessibles.</p>
+
+            <h4>Performance Énergétique</h4>
+
+            <ul class="spec-list">
+                <li>
+                    <span class="spec-label" data-field="perf_label1">Isolation thermique</span>
+                    <span class="spec-value" data-field="perf_value1">RT2012 équivalent ou supérieur</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="perf_label2">Production eau chaude</span>
+                    <span class="spec-value" data-field="perf_value2">60% solaire thermique minimum</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="perf_label3">Climatisation</span>
+                    <span class="spec-value" data-field="perf_value3">VRV haute efficacité</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="perf_label4">Éclairage</span>
+                    <span class="spec-value" data-field="perf_value4">100% LED, gestion automatisée</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="perf_label5">Récupération eaux pluviales</span>
+                    <span class="spec-value" data-field="perf_value5">Pour arrosage et sanitaires</span>
+                </li>
+            </ul>
+
+            <h4>Domotique & Smart Building</h4>
+            
+            <p data-field="section6_para3">Système de gestion technique centralisée (GTC) pour l'ensemble du complexe. Dans les chambres et appartements : contrôle éclairage, climatisation, rideaux, TV, room service via tablette ou smartphone. Serrures électroniques, détection de présence, gestion énergétique intelligente.</p>
+
+            <h4>Sécurité</h4>
+            
+            <p data-field="section6_para4">Système de sécurité incendie (SSI) conforme, vidéosurveillance périmétrique et des espaces communs, contrôle d'accès, coffres-forts dans toutes les unités, éclairage de sécurité, issues de secours conformes.</p>
+
+            <h4>Acoustique</h4>
+            
+            <p data-field="section6_para5">Isolation acoustique entre unités : 55 dB minimum. Traitement acoustique des espaces communs (restaurant, lobby, ballroom). Équipements techniques silencieux et isolés.</p>
+        </section>
+
+        <!-- Section 7: Aménagements Extérieurs -->
+        <section id="amenagements-exterieurs">
+            <span class="section-number">Section 07</span>
+            <h2 data-field="section7_title">Aménagements Extérieurs & Paysagers</h2>
+
+            <h3 data-field="section7_h3_1">Paysagiste Référent</h3>
+            
+            <div class="info-box">
+                <h5 data-field="paysagiste_nom">Pascal LOPEZ — ID Paysages</h5>
+                <p data-field="paysagiste_desc">La conception paysagère sera confiée à Pascal LOPEZ et son agence ID Paysages. La coordination étroite entre l'architecte et le paysagiste est essentielle dès les phases amont pour garantir une intégration harmonieuse du bâti dans son environnement.</p>
+            </div>
+
+            <h3 data-field="section7_h3_2">Programme des Aménagements Extérieurs</h3>
+
+            <h4>Équipements Sportifs</h4>
+
+            <ul class="spec-list">
+                <li>
+                    <span class="spec-label" data-field="sport_label1">Terrains de Padel</span>
+                    <span class="spec-value" data-field="sport_value1">2 courts minimum</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="sport_label2">Circuit de jogging</span>
+                    <span class="spec-value" data-field="sport_value2">Parcours balisé dans la végétation</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="sport_label3">Aire de jeux enfants</span>
+                    <span class="spec-value" data-field="sport_value3">Espace sécurisé, équipements naturels</span>
+                </li>
+            </ul>
+
+            <h4 data-field="section7_h4_1">Amphithéâtre Végétal</h4>
+            
+            <p data-field="section7_para1">Un amphithéâtre à ciel ouvert, sculpté dans la pente naturelle et habillé de végétation, pouvant accueillir événements culturels, concerts acoustiques, cérémonies et rassemblements. Capacité indicative : 150-200 places.</p>
+
+            <h4>Principes Paysagers</h4>
+            
+            <p data-field="section7_para2"><strong>Végétation :</strong> Palette végétale méditerranéenne et endémique nécessitant peu d'arrosage. Olivier centenaires préservés, agrumes, lavandes, romarins, graminées ornementales. Préservation maximale des arbres existants.</p>
+
+            <p data-field="section7_para3"><strong>Circulations :</strong> Cheminements piétons en matériaux naturels (pierre, bois, stabilisé) connectant l'ensemble des équipements. Éclairage discret intégré.</p>
+
+            <p data-field="section7_para4"><strong>Gestion de l'eau :</strong> Noues paysagères, bassins de rétention naturalisés, irrigation goutte-à-goutte automatisée.</p>
+
+            <p data-field="section7_para5"><strong>Mobilier extérieur :</strong> Bancs, pergolas, transats — design cohérent avec l'architecture, matériaux résistants et élégants.</p>
+        </section>
+
+        <!-- Section 8: Planning & Livrables -->
+        <section id="planning">
+            <span class="section-number">Section 08</span>
+            <h2 data-field="section8_title">Planning & Livrables Attendus</h2>
+
+            <h3 data-field="section8_h3_1">Phases de Mission</h3>
+
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-phase" data-field="phase1_num">Phase 1</div>
+                    <div class="timeline-title" data-field="phase1_title">Esquisse (ESQ)</div>
+                    <div class="timeline-desc" data-field="phase1_desc">Études préliminaires, implantation générale, volumétrie, premières intentions architecturales et paysagères. Validation du concept avec le maître d'ouvrage.</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-phase" data-field="phase2_num">Phase 2</div>
+                    <div class="timeline-title" data-field="phase2_title">Avant-Projet Sommaire (APS)</div>
+                    <div class="timeline-desc" data-field="phase2_desc">Affinement du projet, plans masse, coupes générales, façades, premiers choix de matériaux. Estimation budgétaire préliminaire.</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-phase" data-field="phase3_num">Phase 3</div>
+                    <div class="timeline-title" data-field="phase3_title">Avant-Projet Définitif (APD)</div>
+                    <div class="timeline-desc" data-field="phase3_desc">Plans détaillés, carnets de détails, fiches espaces, synthèse technique. Dossier de demande de permis de construire.</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-phase" data-field="phase4_num">Phase 4</div>
+                    <div class="timeline-title" data-field="phase4_title">Projet (PRO) & DCE</div>
+                    <div class="timeline-desc" data-field="phase4_desc">Documents d'exécution, plans techniques tous corps d'état, CCTP, quantitatifs. Consultation des entreprises.</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-phase" data-field="phase5_num">Phase 5</div>
+                    <div class="timeline-title" data-field="phase5_title">Suivi de Chantier (DET/AOR)</div>
+                    <div class="timeline-desc" data-field="phase5_desc">Direction de l'exécution des travaux, visites de chantier, réception des ouvrages.</div>
+                </div>
+            </div>
+
+            <h3 data-field="section8_h3_2">Livrables Interior Design</h3>
+
+            <ul class="spec-list">
+                <li>
+                    <span class="spec-label" data-field="livrable_label1">Moodboards & planches tendances</span>
+                    <span class="spec-value" data-field="livrable_value1">Par typologie d'espace</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="livrable_label2">Plans d'aménagement mobilier</span>
+                    <span class="spec-value" data-field="livrable_value2">Échelle 1/50</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="livrable_label3">Élévations intérieures</span>
+                    <span class="spec-value" data-field="livrable_value3">Tous murs principaux</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="livrable_label4">Carnets de détails</span>
+                    <span class="spec-value" data-field="livrable_value4">Menuiseries, agencements</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="livrable_label5">Fiches produits</span>
+                    <span class="spec-value" data-field="livrable_value5">Mobilier, luminaires, accessoires</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="livrable_label6">Palettes matériaux</span>
+                    <span class="spec-value" data-field="livrable_value6">Échantillons physiques</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="livrable_label7">Rendus 3D photoréalistes</span>
+                    <span class="spec-value" data-field="livrable_value7">Espaces clés</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="livrable_label8">Budgets estimatifs</span>
+                    <span class="spec-value" data-field="livrable_value8">Par poste et par espace</span>
+                </li>
+            </ul>
+
+            <h3>Formats de Rendu</h3>
+            
+            <p data-field="section8_para1">Plans et documents techniques : DWG + PDF. Rendus et présentations : PDF haute définition + source (InDesign/Photoshop). Maquettes 3D : SketchUp/Revit + exports.</p>
+        </section>
+
+        <!-- Section 9: Annexes -->
+        <section id="annexes">
+            <span class="section-number">Section 09</span>
+            <h2 data-field="section9_title">Annexes</h2>
+
+            <h3 data-field="section9_h3_1">Documents de Référence</h3>
+            
+            <p data-field="section9_para1">Les documents suivants sont mis à disposition des prestataires et consultables sur demande auprès du maître d'ouvrage :</p>
+
+            <ul class="spec-list">
+                <li>
+                    <span class="spec-label" data-field="doc_label1">Titre foncier</span>
+                    <span class="spec-value" data-field="doc_value1">TF 30810/30 — 7 639 m²</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="doc_label2">Plan topographique</span>
+                    <span class="spec-value" data-field="doc_value2">Relevé géomètre</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="doc_label3">Étude géotechnique</span>
+                    <span class="spec-value" data-field="doc_value3">Rapport de sol</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="doc_label4">Permis de construire</span>
+                    <span class="spec-value" data-field="doc_value4">Autorisation obtenue</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="doc_label5">Business Plan synthétique</span>
+                    <span class="spec-value" data-field="doc_value5">bp.ouazzanehospitality.com</span>
+                </li>
+                <li>
+                    <span class="spec-label" data-field="doc_label6">Contrat-programme</span>
+                    <span class="spec-value" data-field="doc_value6">contrat.ouazzanehospitality.com</span>
+                </li>
+            </ul>
+
+            <h3 data-field="section9_h3_2">Benchmarks Visuels</h3>
+            
+            <p data-field="section9_para2">Les références visuelles ci-dessous illustrent l'esprit recherché et serviront de base aux échanges avec les équipes de conception :</p>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Référence</th>
+                            <th>Pertinence</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong data-field="bench1_ref">Hôtel Xaluca Aguelmame Sidi Ali</strong></td>
+                            <td data-field="bench1_pert">Intégration paysagère, matériaux locaux, luxe montagnard</td>
+                        </tr>
+                        <tr>
+                            <td><strong data-field="bench2_ref">Alma Resort (Vietnam)</strong></td>
+                            <td data-field="bench2_pert">Modèle RIA/RIPT, diversification produit, ratio équipements</td>
+                        </tr>
+                        <tr>
+                            <td><strong data-field="bench3_ref">Four Seasons Marrakech</strong></td>
+                            <td data-field="bench3_pert">Standards 5 étoiles luxe, interprétation contemporaine marocaine</td>
+                        </tr>
+                        <tr>
+                            <td><strong data-field="bench4_ref">Références nordiques</strong></td>
+                            <td data-field="bench4_pert">Atmosphères, mobilier, éclairage, matériaux</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 data-field="section9_h3_3">Contacts</h3>
+            
+            <div class="info-box">
+                <h5>Maître d'Ouvrage</h5>
+                <p data-field="contact_societe"><strong>Ouazzane Hospitality SARL</strong></p>
+                <p data-field="contact_associes">Représenté par KEF Investissements (34%), Anass Tahiri (33%), Abdelmalik Hounain (33%)</p>
+                <p data-field="contact_conseil">Conseil juridique : Maître Mohamed Jalal Atitar</p>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="document-footer">
+            <div class="footer-logo">TACHTA</div>
+            <p class="footer-text" data-field="footer_text">
+                Cahier des Charges Architectural — Version 1.0<br>
+                © 2026 Ouazzane Hospitality SARL — Tous droits réservés
+            </p>
+            <div class="confidential-badge">Document Confidentiel</div>
+        </footer>
+
+    </main>
+
+    <script>
+        // ========== CONFIGURATION ==========
+        const EDIT_PASSWORD = 'OH1234';
+        const FIREBASE_PATH = 'CdC OH';
+        const DEBOUNCE_DELAY = 500;
+        
+        // Firebase Configuration (Hardcoded)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCYIY1npF5lBb8uJ6Z_evETDMaDcnfl_5o",
+            authDomain: "ouazzane-hospitality.firebaseapp.com",
+            databaseURL: "https://ouazzane-hospitality-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "ouazzane-hospitality",
+            storageBucket: "ouazzane-hospitality.firebasestorage.app",
+            messagingSenderId: "55074975436",
+            appId: "1:55074975436:web:c1aad3f108ad0f9d491c69",
+            measurementId: "G-GHE180GJHQ"
+        };
+
+        // State
+        let db = null;
+        let dataRef = null;
+        let presenceRef = null;
+        let isOnline = false;
+        let isEditMode = false;
+        let userId = null;
+        let pendingChanges = [];
+        let debounceTimers = {};
+        let originalContent = {};
+
+        // ========== INITIALIZATION ==========
+        document.addEventListener('DOMContentLoaded', init);
+
+        function init() {
+            // Generate unique user ID
+            userId = localStorage.getItem('cdc_userId') || generateUserId();
+            localStorage.setItem('cdc_userId', userId);
+
+            // Store original content for restoration
+            storeOriginalContent();
+
+            // Initialize Firebase
+            initFirebase();
+
+            // Setup editable fields (initially disabled)
+            setupEditableFields();
+        }
+
+        function generateUserId() {
+            return 'user_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        function storeOriginalContent() {
+            document.querySelectorAll('[data-field]').forEach(el => {
+                originalContent[el.dataset.field] = el.innerHTML;
+            });
+        }
+
+        // ========== FIREBASE ==========
+        function initFirebase() {
+            try {
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.database();
+                dataRef = db.ref(FIREBASE_PATH);
+                presenceRef = db.ref(FIREBASE_PATH + '/presence');
+
+                // Setup connection monitoring
+                setupConnectionMonitoring();
+
+                // Setup presence
+                setupPresence();
+
+                // Listen to data changes
+                listenToChanges();
+
+                // Listen to presence changes
+                listenToPresence();
+
+                updateConnectionStatus('online');
+                showToast('✅ Connecté à la base de données', 'success');
+            } catch (error) {
+                console.error('Firebase init error:', error);
+                updateConnectionStatus('offline');
+                showToast('⚠️ Mode hors-ligne activé', 'warning');
+                loadFromLocalStorage();
+            }
+        }
+
+        function setupConnectionMonitoring() {
+            const connectedRef = db.ref('.info/connected');
+            connectedRef.on('value', (snap) => {
+                if (snap.val() === true) {
+                    isOnline = true;
+                    updateConnectionStatus('online');
+                    syncPendingChanges();
+                } else {
+                    isOnline = false;
+                    updateConnectionStatus('offline');
+                }
+            });
+        }
+
+        function setupPresence() {
+            const userPresenceRef = presenceRef.child(userId);
+            
+            userPresenceRef.onDisconnect().remove();
+            
+            userPresenceRef.set({
+                online: true,
+                lastSeen: firebase.database.ServerValue.TIMESTAMP,
+                editMode: isEditMode
+            });
+        }
+
+        function updatePresence() {
+            if (!isOnline) return;
+            const userPresenceRef = presenceRef.child(userId);
+            userPresenceRef.update({
+                editMode: isEditMode,
+                lastSeen: firebase.database.ServerValue.TIMESTAMP
+            });
+        }
+
+        function listenToPresence() {
+            presenceRef.on('value', (snap) => {
+                const users = snap.val() || {};
+                const count = Object.keys(users).length;
+                document.getElementById('userCountText').textContent = count + ' en ligne';
+            });
+        }
+
+        function listenToChanges() {
+            dataRef.child('content').on('value', (snap) => {
+                const data = snap.val();
+                if (data) {
+                    applyRemoteChanges(data);
+                    updateLastSyncTime();
+                }
+            });
+
+            // Listen for field-level editing indicators
+            dataRef.child('editing').on('value', (snap) => {
+                const editing = snap.val() || {};
+                updateEditingIndicators(editing);
+            });
+        }
+
+        function applyRemoteChanges(data) {
+            Object.keys(data).forEach(field => {
+                const el = document.querySelector(`[data-field="${field}"]`);
+                if (el && el.innerHTML !== data[field]) {
+                    el.innerHTML = sanitizeHTML(data[field]);
+                }
+            });
+        }
+
+        function updateEditingIndicators(editing) {
+            // Remove all editing indicators first
+            document.querySelectorAll('[data-field]').forEach(el => {
+                el.classList.remove('remote-editing');
+            });
+
+            // Add indicators for fields being edited by others
+            Object.keys(editing).forEach(field => {
+                if (editing[field] && editing[field] !== userId) {
+                    const el = document.querySelector(`[data-field="${field}"]`);
+                    if (el) {
+                        el.classList.add('remote-editing');
+                    }
+                }
+            });
+        }
+
+        function syncToFirebase(field, value) {
+            if (!isOnline) {
+                // Queue for later sync
+                pendingChanges.push({ field, value, timestamp: Date.now() });
+                saveToLocalStorage();
+                return;
+            }
+
+            updateConnectionStatus('syncing');
+            
+            dataRef.child('content').child(field).set(value)
+                .then(() => {
+                    updateConnectionStatus('online');
+                    updateLastSyncTime();
+                })
+                .catch((error) => {
+                    console.error('Sync error:', error);
+                    pendingChanges.push({ field, value, timestamp: Date.now() });
+                    updateConnectionStatus('offline');
+                });
+        }
+
+        function setFieldEditing(field, isEditing) {
+            if (!isOnline) return;
+            
+            if (isEditing) {
+                dataRef.child('editing').child(field).set(userId);
+            } else {
+                dataRef.child('editing').child(field).remove();
+            }
+        }
+
+        function syncPendingChanges() {
+            if (pendingChanges.length === 0) return;
+
+            showToast('🔄 Synchronisation des modifications en attente...', 'info');
+            
+            const changes = [...pendingChanges];
+            pendingChanges = [];
+
+            changes.forEach(change => {
+                syncToFirebase(change.field, change.value);
+            });
+        }
+
+        // ========== LOCAL STORAGE ==========
+        function saveToLocalStorage() {
+            const data = {};
+            document.querySelectorAll('[data-field]').forEach(el => {
+                data[el.dataset.field] = el.innerHTML;
+            });
+            localStorage.setItem('cdc_content', JSON.stringify(data));
+            localStorage.setItem('cdc_pending', JSON.stringify(pendingChanges));
+        }
+
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem('cdc_content');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    applyRemoteChanges(data);
+                } catch (e) {
+                    console.error('Error loading from localStorage:', e);
+                }
+            }
+
+            const pending = localStorage.getItem('cdc_pending');
+            if (pending) {
+                try {
+                    pendingChanges = JSON.parse(pending);
+                } catch (e) {
+                    pendingChanges = [];
+                }
+            }
+        }
+
+        // ========== EDITING ==========
+        function setupEditableFields() {
+            document.querySelectorAll('[data-field]').forEach(el => {
+                // Initially not editable
+                el.contentEditable = 'false';
+
+                el.addEventListener('focus', () => {
+                    if (isEditMode) {
+                        setFieldEditing(el.dataset.field, true);
+                    }
+                });
+
+                el.addEventListener('blur', () => {
+                    if (isEditMode) {
+                        setFieldEditing(el.dataset.field, false);
+                    }
+                });
+
+                el.addEventListener('input', () => {
+                    if (isEditMode) {
+                        debouncedSync(el.dataset.field, el.innerHTML);
+                    }
+                });
+            });
+        }
+
+        function enableEditing() {
+            document.querySelectorAll('[data-field]').forEach(el => {
+                el.contentEditable = 'true';
+            });
+            document.body.classList.add('edit-mode');
+            document.getElementById('editModeBadge').classList.add('active');
+            document.getElementById('editBtn').style.display = 'none';
+            document.getElementById('exitEditBtn').style.display = 'flex';
+            document.getElementById('restoreBtn').style.display = 'flex';
+            isEditMode = true;
+            updatePresence();
+        }
+
+        function disableEditing() {
+            document.querySelectorAll('[data-field]').forEach(el => {
+                el.contentEditable = 'false';
+                el.classList.remove('remote-editing');
+            });
+            document.body.classList.remove('edit-mode');
+            document.getElementById('editModeBadge').classList.remove('active');
+            document.getElementById('editBtn').style.display = 'flex';
+            document.getElementById('exitEditBtn').style.display = 'none';
+            document.getElementById('restoreBtn').style.display = 'none';
+            isEditMode = false;
+            updatePresence();
+
+            // Clear all editing indicators
+            if (isOnline) {
+                dataRef.child('editing').remove();
+            }
+        }
+
+        function debouncedSync(field, value) {
+            if (debounceTimers[field]) {
+                clearTimeout(debounceTimers[field]);
+            }
+            
+            debounceTimers[field] = setTimeout(() => {
+                syncToFirebase(field, value);
+                delete debounceTimers[field];
+            }, DEBOUNCE_DELAY);
+        }
+
+        // ========== PASSWORD MODAL ==========
+        function showPasswordModal() {
+            document.getElementById('passwordModal').classList.add('active');
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('passwordInput').classList.remove('error');
+            document.getElementById('passwordError').classList.remove('visible');
+            setTimeout(() => document.getElementById('passwordInput').focus(), 100);
+        }
+
+        function hidePasswordModal() {
+            document.getElementById('passwordModal').classList.remove('active');
+        }
+
+        function handlePasswordKeypress(event) {
+            if (event.key === 'Enter') {
+                checkPassword();
+            }
+        }
+
+        function checkPassword() {
+            const input = document.getElementById('passwordInput');
+            const password = input.value;
+
+            if (password === EDIT_PASSWORD) {
+                hidePasswordModal();
+                enableEditing();
+                showToast('✏️ Mode édition activé', 'success');
+            } else {
+                input.classList.add('error');
+                document.getElementById('passwordError').classList.add('visible');
+                input.value = '';
+                input.focus();
+            }
+        }
+
+        function exitEditMode() {
+            disableEditing();
+            showToast('👁️ Mode lecture activé', 'info');
+        }
+
+        // ========== RESTORE ==========
+        function confirmRestore() {
+            document.getElementById('restoreModal').classList.add('active');
+        }
+
+        function hideRestoreModal() {
+            document.getElementById('restoreModal').classList.remove('active');
+        }
+
+        function restoreOriginalVersion() {
+            hideRestoreModal();
+
+            // Apply original content
+            Object.keys(originalContent).forEach(field => {
+                const el = document.querySelector(`[data-field="${field}"]`);
+                if (el) {
+                    el.innerHTML = originalContent[field];
+                    syncToFirebase(field, originalContent[field]);
+                }
+            });
+
+            showToast('🔄 Version originale restaurée', 'success');
+        }
+
+        // ========== UI UPDATES ==========
+        function updateConnectionStatus(status) {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+
+            dot.className = 'status-dot';
+            
+            switch (status) {
+                case 'online':
+                    dot.classList.add('online');
+                    text.textContent = 'Connecté';
+                    break;
+                case 'syncing':
+                    dot.classList.add('syncing');
+                    text.textContent = 'Synchronisation...';
+                    break;
+                case 'offline':
+                    dot.classList.add('offline');
+                    text.textContent = 'Hors ligne';
+                    break;
+            }
+        }
+
+        function updateLastSyncTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('fr-FR', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            document.getElementById('lastSyncTime').textContent = timeStr;
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('hiding');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // ========== EXPORT ==========
+        function downloadPDF() {
+            showToast('📥 Génération du PDF en cours...', 'info');
+
+            const element = document.body;
+            const opt = {
+                margin: [10, 10, 10, 10],
+                filename: 'Cahier-des-Charges-TACHTA.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 2,
+                    useCORS: true,
+                    letterRendering: true
+                },
+                jsPDF: { 
+                    unit: 'mm', 
+                    format: 'a4', 
+                    orientation: 'portrait' 
+                },
+                pagebreak: { mode: 'avoid-all' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                showToast('✅ PDF téléchargé', 'success');
+            });
+        }
+
+        function downloadHTML() {
+            // Get current content
+            const content = {};
+            document.querySelectorAll('[data-field]').forEach(el => {
+                content[el.dataset.field] = el.innerHTML;
+            });
+
+            // Clone the document
+            const clone = document.documentElement.cloneNode(true);
+            
+            // Remove toolbar and modals from clone
+            const elementsToRemove = clone.querySelectorAll('.toolbar, .modal-overlay, .toast-container, .sync-info');
+            elementsToRemove.forEach(el => el.remove());
+
+            // Create downloadable HTML
+            const htmlContent = '<!DOCTYPE html>\n' + clone.outerHTML;
+            
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Cahier-des-Charges-TACHTA.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showToast('✅ HTML téléchargé', 'success');
+        }
+
+        // ========== SECURITY ==========
+        function sanitizeHTML(html) {
+            // Basic XSS protection - remove script tags and event handlers
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+            
+            // Remove script tags
+            temp.querySelectorAll('script').forEach(el => el.remove());
+            
+            // Remove event handlers
+            temp.querySelectorAll('*').forEach(el => {
+                Array.from(el.attributes).forEach(attr => {
+                    if (attr.name.startsWith('on')) {
+                        el.removeAttribute(attr.name);
+                    }
+                });
+            });
+            
+            return temp.innerHTML;
+        }
+    </script>
+
+</body>
+</html>
